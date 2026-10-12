@@ -42,6 +42,7 @@
             <div class="flex items-center gap-2">
                 <span class="text-2xl">🗺️</span>
                 <h1 class="text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 via-amber-300 to-rose-300">AI 知識領土戰</h1>
+                <span class="hidden md:inline text-[11px] font-bold text-slate-500 ml-2 whitespace-nowrap">秉亨老師 × Claude 協同製作</span>
                 <span id="roundInfo" class="ml-2 text-xs md:text-sm font-bold bg-slate-700 px-3 py-1 rounded-full text-slate-200"></span>
             </div>
             <div class="flex items-center gap-2">
@@ -142,8 +143,8 @@
                 <div id="rankList" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-5"></div>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-2 max-w-3xl mx-auto">
                     <button onclick="openReview()" class="py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 font-black">📋 題目檢討</button>
-                    <button onclick="startGame(true)" class="py-3 rounded-xl bg-slate-600 hover:bg-slate-500 font-bold">🔁 再一局（接續新題）</button>
-                    <button id="resultRegenBtn" onclick="regenerateBank()" class="py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 font-black">🔄 出新題庫</button>
+                    <button onclick="startGame('replay')" class="py-3 rounded-xl bg-slate-600 hover:bg-slate-500 font-bold">🔁 原題重玩</button>
+                    <button onclick="startGame('new')" class="py-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 font-black">🆕 出新題再一局</button>
                     <button onclick="showSetup()" class="py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-bold">⚙️ 回設定</button>
                 </div>
             </div>
@@ -161,7 +162,7 @@
                 <div id="readyTitle" class="text-2xl font-black text-emerald-300"></div>
                 <div id="readyDesc" class="text-slate-300 mt-2 mb-6"></div>
                 <div class="flex flex-col items-center gap-3">
-                    <button onclick="startGame(false)" class="w-full max-w-md py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 text-xl font-black shadow-xl">🚀 開始遊戲</button>
+                    <button onclick="startGame('fresh')" class="w-full max-w-md py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 text-xl font-black shadow-xl">🚀 開始遊戲</button>
                     <button onclick="regenerateBank()" class="w-full max-w-md py-3 rounded-xl bg-slate-700 hover:bg-slate-600 font-bold">🔄 題目不滿意，重新出題</button>
                     <button onclick="showSetup()" class="text-slate-400 hover:text-white text-sm font-bold">⚙️ 回設定</button>
                 </div>
@@ -285,11 +286,12 @@
                     <!-- 已有題庫 / 試玩 -->
                     <div class="bg-slate-800/60 border border-slate-700 p-4 rounded-xl space-y-2">
                         <div id="bankStatus" class="text-xs text-slate-300"></div>
-                        <button id="useBankBtn" onclick="startGame(false)" class="hidden w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 font-black">🚀 用目前題庫開始</button>
+                        <button id="useBankBtn" onclick="startGame('fresh')" class="hidden w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-900 font-black">🚀 用目前題庫開始</button>
                         <button onclick="useDemoBank()" class="w-full py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">🎮 先用內建題目試玩（不需 API）</button>
                     </div>
                 </div>
             </div>
+            <p class="text-center text-[11px] font-bold text-slate-500 mt-6">🍎 秉亨老師 × Claude 協同製作</p>
         </div>
     </div>
 
@@ -308,8 +310,8 @@
         <div class="shrink-0 bg-slate-800 border-t border-slate-700 px-4 py-3">
             <div class="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-2">
                 <button onclick="closeReview()" class="py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-bold">◀ 回結算</button>
-                <button onclick="closeReview(); startGame(true)" class="py-2.5 bg-slate-600 hover:bg-slate-500 rounded-xl text-sm font-bold">🔁 再一局（接續新題）</button>
-                <button id="reviewRegenBtn" onclick="closeReview(); regenerateBank()" class="py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 rounded-xl text-sm font-black">🔄 出新題庫</button>
+                <button onclick="closeReview(); startGame('replay')" class="py-2.5 bg-slate-600 hover:bg-slate-500 rounded-xl text-sm font-bold">🔁 原題重玩</button>
+                <button onclick="closeReview(); startGame('new')" class="py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-slate-900 rounded-xl text-sm font-black">🆕 出新題再一局</button>
                 <button onclick="closeReview(); showSetup()" class="py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-bold">⚙️ 回設定</button>
             </div>
         </div>
@@ -742,9 +744,11 @@
             { color: '#22c55e', dark: '#14532d', emoji: '🐸', label: '第三組' },
             { color: '#f59e0b', dark: '#78350f', emoji: '🐯', label: '第四組' },
             { color: '#a855f7', dark: '#4c1d95', emoji: '🦄', label: '第五組' },
-            { color: '#ec4899', dark: '#831843', emoji: '🐙', label: '第六組' }
+            { color: '#ec4899', dark: '#831843', emoji: '🐙', label: '第六組' },
+            { color: '#06b6d4', dark: '#164e63', emoji: '🐧', label: '第七組' },
+            { color: '#65a30d', dark: '#365314', emoji: '🐨', label: '第八組' }
         ];
-        let groupCount = Math.min(6, Math.max(2, Number(localStorage.getItem('terr_groups') || 4)));
+        let groupCount = Math.min(8, Math.max(2, Number(localStorage.getItem('terr_groups') || 4)));
         let groupNames = (() => {
             try { const a = JSON.parse(localStorage.getItem('terr_names') || '[]'); if (Array.isArray(a)) return a; } catch (e) {}
             return [];
@@ -760,7 +764,7 @@
         }
 
         function renderGroupSettings() {
-            $('groupCountBtns').innerHTML = [2, 3, 4, 5, 6].map(n =>
+            $('groupCountBtns').innerHTML = [2, 3, 4, 5, 6, 7, 8].map(n =>
                 `<button onclick="setGroupCount(${n})" class="w-9 h-9 rounded-lg font-black text-sm border ${n === groupCount ? 'bg-sky-500 border-sky-300 text-slate-900' : 'bg-slate-800 border-slate-600 text-slate-300'}">${n}</button>`
             ).join('');
             $('groupNames').innerHTML = Array.from({ length: groupCount }, (_, i) => {
@@ -944,11 +948,26 @@ ${JSON.stringify(list)}
         }
         function bankSize() { return bankAll[1].length + bankAll[2].length + bankAll[3].length; }
 
+        // 原題重玩：把上一局出過的題目依難度排好，抽題時優先使用
+        let replayPool = null;
+        function setReplay(log) {
+            if (!log.length) { replayPool = null; return; }
+            replayPool = { 1: [], 2: [], 3: [] };
+            log.forEach(e => {
+                const t = e.tier || e.value || 1;
+                replayPool[t].push({ q: e.q, options: e.options, answer: e.answer, explanation: e.explanation, source: e.source });
+            });
+        }
         function unusedCount() { return bank[1].length + bank[2].length + bank[3].length; }
 
         // 依難度抽題；出過的題目不會再出現。該難度用完就向相鄰難度借
         function drawQuestion(value) {
             const order = value === 1 ? [1, 2, 3] : value === 2 ? [2, 1, 3] : [3, 2, 1];
+            if (replayPool) {
+                for (const t of order) if (replayPool[t].length) return { ...replayPool[t].shift(), tier: t };
+                replayPool = null;
+                toast('上一局的題目都出過了，接下來換新題目', '#38bdf8');
+            }
             let picked = null;
             for (const t of order) if (bank[t].length) { picked = { ...bank[t].pop(), tier: t }; break; }
             if (!picked) {
@@ -1132,7 +1151,9 @@ ${JSON.stringify(list)}
             3: { size: 5, homes: [[0, 0], [0, 4], [4, 2]] },
             4: { size: 5, homes: [[0, 0], [0, 4], [4, 4], [4, 0]] },
             5: { size: 6, homes: [[0, 0], [0, 5], [5, 5], [5, 0], [3, 0]] },
-            6: { size: 6, homes: [[0, 0], [0, 5], [5, 5], [5, 0], [3, 0], [2, 5]] }
+            6: { size: 6, homes: [[0, 0], [0, 5], [5, 5], [5, 0], [3, 0], [2, 5]] },
+            7: { size: 7, homes: [[0, 0], [0, 6], [6, 6], [6, 0], [3, 0], [3, 6], [0, 3]] },
+            8: { size: 7, homes: [[0, 0], [0, 6], [6, 6], [6, 0], [3, 0], [3, 6], [0, 3], [6, 3]] }
         };
 
         // 長局或不限時，2～4 組改用 6×6 大地圖，才夠占
@@ -1165,15 +1186,18 @@ ${JSON.stringify(list)}
                 else x.value = roll < 0.25 ? 1 : roll < 0.65 ? 2 : 3;
             });
             // 寶箱：放在離基地 2 格以上的地方
-            const chestCount = size === 5 ? 2 : 3;
+            const chestCount = size === 5 ? 2 : size === 6 ? 3 : 4;
             shuffle(free.filter(x => dist(x) >= 2)).slice(0, chestCount).forEach(x => { x.chest = true; });
             return { size, cells };
         }
 
-        function startGame(sameBank) {
+        // mode：'replay' 原題重玩（上一局出過的題目再出一次）；'new' 出新題（接續還沒出過的題目）
+        function startGame(mode) {
             saveApiKeyFromModal(); saveQuizSettings(); saveGroupSettings();
+            const prevLog = (game && game.log) ? game.log : [];
+            setReplay(mode === 'replay' ? prevLog : []);
+            const sameBank = mode === 'new';
             if (!bankSize()) { alert('還沒有題庫，請先上傳教材、選主題，或用內建題目試玩。'); showSetup(); return; }
-            // 「再一局」：接續還沒出過的題目；不夠就背景補新題，不會重複
             if (sameBank && isDemoBank && unusedCount() < 6) refillBank();
             topUpBank();
             game = {
@@ -1314,7 +1338,7 @@ ${JSON.stringify(list)}
             const attacker = game.current;
             const defender = cell.owner;
             qState = { cell, q, attacker, defender, phase: 'answer', answerer: attacker, out: new Set(), entry: {
-                q: q.q, options: q.options, answer: q.answer, explanation: q.explanation, source: q.source, value: cell.value,
+                q: q.q, options: q.options, answer: q.answer, explanation: q.explanation, source: q.source, value: cell.value, tier: q.tier,
                 attacker, defender, pick: null, steal: null
             } };
             const s = TEAM_STYLES[attacker];
@@ -1623,7 +1647,6 @@ ${JSON.stringify(list)}
             $('menuDesc').innerHTML = winners.length > 1
                 ? `<span class="text-xl font-black text-amber-300">🤝 ${winners.map(teamName).map(escapeHtml).join('、')} 同分並列第一！</span>`
                 : `<span class="text-xl font-black" style="color:${TEAM_STYLES[winners[0]].color}">🏆 恭喜 ${escapeHtml(teamName(winners[0]))} 稱霸地圖！</span>`;
-            $('resultRegenBtn').classList.toggle('hidden', !lastSource);
             menuParts('resultPanel');
             SFX.win();
         }
@@ -1633,7 +1656,6 @@ ${JSON.stringify(list)}
         function openReview() {
             reviewFilter = 'all';
             renderReview();
-            $('reviewRegenBtn').classList.toggle('hidden', !lastSource);
             $('reviewOverlay').classList.remove('hidden');
             $('reviewList').scrollTop = 0;
         }
