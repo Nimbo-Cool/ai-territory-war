@@ -97,10 +97,10 @@
 
             <!-- 搶答區 -->
             <div id="stealArea" class="hidden mt-6 text-center">
-                <div class="text-2xl md:text-3xl font-black text-amber-300 mb-1 pulse-big">⚡ 搶答時間！</div>
-                <div class="text-sm md:text-base text-slate-300 mb-4">其他組誰要搶？<b class="text-white">先按的組上來答</b>，答對拿走這一格，答錯扣 1 分</div>
+                <div class="text-2xl md:text-3xl font-black text-amber-300 mb-1">🎡 轉盤抽一組來搶答！</div>
+                <div id="stealHint" class="text-sm md:text-base text-slate-300 mb-4">抽到的組答對就拿走這一格，答錯不扣分</div>
                 <div id="stealBtns" class="flex flex-wrap justify-center gap-3"></div>
-                <button onclick="noSteal()" class="mt-4 px-5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">沒人要搶，公布答案</button>
+                <button onclick="noSteal()" class="mt-4 px-5 py-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-sm font-bold">跳過搶答，公布答案</button>
             </div>
 
             <!-- 結果區 -->
@@ -121,10 +121,12 @@
             <h3 class="text-2xl font-black text-amber-300">📖 遊戲規則</h3>
             <p>1️⃣ 各組輪流行動。輪到的組，點一個<b class="text-amber-300">發光的格子</b>：可以是和自己領土相鄰的空地，也可以是相鄰的別組格子（攻打）。</p>
             <p>2️⃣ 答對就占下那一格。<b>★ 越多題目越難，分數也越高</b>（★=1 分、★★=2 分、★★★=3 分）。</p>
-            <p>3️⃣ 答錯或時間到，進入<b class="text-amber-300">⚡ 搶答</b>：其他組最快按下按鈕的上來答，答對拿走這一格；答錯扣 1 分。原本的格主搶答成功還能 +1 分守城獎勵。</p>
-            <p>4️⃣ 🎁 寶箱格：占下就能抽獎，可能加分、分數翻倍，或再行動一次！</p>
-            <p>5️⃣ 🏰 包圍：空地被同一組的格子（或地圖邊緣）完全包住，就自動歸那一組。</p>
-            <p>6️⃣ 🏠 基地不能被攻打。回合結束或地圖占滿時，<b>總分最高的組獲勝</b>。</p>
+            <p>3️⃣ 答錯或時間到，<b class="text-amber-300">🎡 轉盤</b>會從其他組抽一組來搶答：答對拿走這一格，答錯不扣分。原本的格主被抽到又答對，還能 +1 分守城獎勵。</p>
+            <p>4️⃣ ❓ <b>隱藏格</b>：選了才翻開，可能是 ★、★★、★★★，也可能藏著寶箱或 💣 炸彈。</p>
+            <p>5️⃣ 💣 <b>炸彈</b>：答對就拆彈成功（+2 分）；沒人答對就爆炸，挑戰的組會失去自己的一格。</p>
+            <p>6️⃣ 🎁 <b>寶箱</b>：💰 加分、✖️2 翻倍、🔁 再行動、🌀 傳送（空降任一空地）、🧱 城牆（一回合內不能被攻打）、🔍 透視（翻開 3 格隱藏格）。</p>
+            <p>7️⃣ 🏰 包圍：空地被同一組的格子（或地圖邊緣）完全包住，就自動歸那一組。🏠 基地不能被攻打。</p>
+            <p>8️⃣ 回合結束或地圖占滿時，<b>總分最高的組獲勝</b>。</p>
             <div class="text-right"><button onclick="closeRules()" class="px-6 py-2.5 rounded-xl bg-emerald-500 text-slate-900 font-black">知道了</button></div>
         </div>
     </div>
@@ -1170,7 +1172,7 @@ ${JSON.stringify(list)}
             const { size, homes } = layoutFor(game.n);
             const cells = [];
             for (let r = 0; r < size; r++) for (let c = 0; c < size; c++) {
-                cells.push({ r, c, value: 1, owner: null, home: false, chest: false, extra: 0, anim: false });
+                cells.push({ r, c, value: 1, owner: null, home: false, chest: false, bomb: false, hidden: false, extra: 0, anim: false });
             }
             const at = (r, c) => cells[r * size + c];
             homes.forEach(([r, c], i) => { const x = at(r, c); x.owner = i; x.home = true; x.value = 0; });
@@ -1188,6 +1190,11 @@ ${JSON.stringify(list)}
             // 寶箱：放在離基地 2 格以上的地方
             const chestCount = size === 5 ? 2 : size === 6 ? 3 : 4;
             shuffle(free.filter(x => dist(x) >= 2)).slice(0, chestCount).forEach(x => { x.chest = true; });
+            // 約一半的格子蓋起來（基地旁邊的格子保持可見，開局比較好選）
+            shuffle(free.filter(x => dist(x) >= 2)).slice(0, Math.round(free.length * 0.5)).forEach(x => { x.hidden = true; });
+            // 炸彈只藏在隱藏格裡，而且不和寶箱重疊
+            const bombCount = Math.max(1, chestCount - 1);
+            shuffle(free.filter(x => x.hidden && !x.chest)).slice(0, bombCount).forEach(x => { x.bomb = true; if (x.value === 1) x.value = 2; });
             return { size, cells };
         }
 
@@ -1202,7 +1209,8 @@ ${JSON.stringify(list)}
             topUpBank();
             game = {
                 n: groupCount,
-                teams: Array.from({ length: groupCount }, () => ({ bonus: 0, correct: 0, wrong: 0, steals: 0 })),
+                teams: Array.from({ length: groupCount }, () => ({ bonus: 0, correct: 0, wrong: 0, steals: 0, wallUntil: -1 })),
+                teleportFor: null,   // 寶箱「傳送」
                 pointer: 0,          // 正常輪替順序
                 current: 0,
                 extraTurnFor: null,  // 寶箱「再行動一次」
@@ -1232,6 +1240,7 @@ ${JSON.stringify(list)}
             const set = new Set();
             mine.forEach(m => neighbors(m).forEach(nb => {
                 if (nb.owner === team || nb.home) return;
+                if (nb.owner !== null && hasWall(nb.owner)) return;   // 🧱 城牆保護中
                 set.add(nb);
             }));
             if (![...set].some(x => x.owner === null)) {
@@ -1239,6 +1248,8 @@ ${JSON.stringify(list)}
             }
             return set;
         }
+
+        function hasWall(team) { return game.teams[team].wallUntil > game.turnsTaken; }
 
         function roundNow() { return Math.floor(game.turnsTaken / game.n) + 1; }
 
@@ -1255,8 +1266,11 @@ ${JSON.stringify(list)}
             const px = Math.max(280, Math.min(vh - 110, vw - sideW - 48, 860));
             const cellPx = Math.floor((px - 28 - gap * (game.size - 1)) / game.size);
             board.style.gridTemplateColumns = `repeat(${game.size}, ${cellPx}px)`;
-            const targets = game.over || qState ? new Set() : validTargets(game.current);
-            const cur = TEAM_STYLES[game.current];
+            const teleport = game.teleportFor !== null && !qState && !game.over;
+            const targets = game.over || qState ? new Set()
+                : teleport ? new Set(game.cells.filter(x => x.owner === null))
+                : validTargets(game.current);
+            const cur = TEAM_STYLES[teleport ? game.teleportFor : game.current];
 
             board.innerHTML = '';
             game.cells.forEach((x, idx) => {
@@ -1271,11 +1285,16 @@ ${JSON.stringify(list)}
                     b.innerHTML = x.home
                         ? `<span style="font-size:${fs * 1.5}px">${s.emoji}</span><span style="font-size:${fs * 0.6}px" class="text-white/90">🏠 基地</span>`
                         : `<span style="font-size:${fs * 1.1}px">${s.emoji}</span><span style="font-size:${fs * 0.75}px" class="text-amber-200">${'★'.repeat(x.value)}${x.extra ? ' ×2' : ''}</span>`;
+                    if (!x.home && hasWall(x.owner)) b.insertAdjacentHTML('beforeend', `<span class="absolute bottom-0.5 left-1" style="font-size:${fs * 0.7}px">🧱</span>`);
+                } else if (x.hidden) {
+                    b.style.background = 'linear-gradient(145deg, #3b0764, #1e1b4b)';
+                    b.style.borderColor = '#7c3aed';
+                    b.innerHTML = `<span style="font-size:${fs * 1.5}px" class="text-violet-200">❓</span>`;
                 } else {
                     b.style.background = x.value === 3 ? '#3b2a0b' : x.value === 2 ? '#1f2937' : '#172033';
                     b.style.borderColor = x.value === 3 ? '#b45309' : '#334155';
-                    b.innerHTML = (x.chest ? `<span style="font-size:${fs * 1.2}px">🎁</span>` : '') +
-                        `<span style="font-size:${fs * (x.chest ? 0.75 : 1)}px" class="${x.value === 3 ? 'text-amber-300' : x.value === 2 ? 'text-sky-200' : 'text-slate-300'}">${'★'.repeat(x.value)}</span>`;
+                    b.innerHTML = (x.chest ? `<span style="font-size:${fs * 1.2}px">🎁</span>` : x.bomb ? `<span style="font-size:${fs * 1.2}px">💣</span>` : '') +
+                        `<span style="font-size:${fs * (x.chest || x.bomb ? 0.75 : 1)}px" class="${x.value === 3 ? 'text-amber-300' : x.value === 2 ? 'text-sky-200' : 'text-slate-300'}">${'★'.repeat(x.value)}</span>`;
                 }
                 if (targets.has(x)) {
                     b.classList.add('cell-target');
@@ -1295,7 +1314,9 @@ ${JSON.stringify(list)}
             banner.style.background = `linear-gradient(135deg, ${s.dark}, #0f172a)`;
             banner.innerHTML = `<div class="text-sm font-bold text-slate-300">現在輪到</div>
                 <div class="text-4xl font-black my-1">${s.emoji} <span style="color:${s.color}">${escapeHtml(teamName(game.current))}</span></div>
-                <div class="text-sm font-bold text-amber-200">👉 點一個發光的格子挑戰！${game.extraTurnBadge ? '<br><span class="text-emerald-300">🎁 寶箱獎勵：再行動一次</span>' : ''}</div>`;
+                <div class="text-sm font-bold text-amber-200">${game.teleportFor !== null
+                    ? `🌀 ${escapeHtml(teamName(game.teleportFor))} 傳送中：點任何一格空地直接空降！`
+                    : '👉 點一個發光的格子挑戰！'}${game.extraTurnBadge ? '<br><span class="text-emerald-300">🎁 寶箱獎勵：再行動一次</span>' : ''}</div>`;
 
             const order = [...Array(game.n).keys()].sort((a, b) => teamScore(b) - teamScore(a));
             $('scoreBoard').innerHTML = order.map((i, rank) => {
@@ -1306,7 +1327,7 @@ ${JSON.stringify(list)}
                     <span class="text-2xl">${st.emoji}</span>
                     <div class="flex-1 min-w-0">
                         <div class="font-black truncate" style="color:${st.color}">${escapeHtml(teamName(i))}</div>
-                        <div class="text-[11px] text-slate-400">🗺️ ${teamCells(i)} 格　✔ ${t.correct}　✘ ${t.wrong}${t.steals ? `　⚡ ${t.steals}` : ''}</div>
+                        <div class="text-[11px] text-slate-400">🗺️ ${teamCells(i)} 格　✔ ${t.correct}　✘ ${t.wrong}${t.steals ? `　⚡ ${t.steals}` : ''}${hasWall(i) ? '　🧱 城牆中' : ''}</div>
                     </div>
                     <span class="text-3xl font-black text-amber-300">${teamScore(i)}</span>
                 </div>`;
@@ -1321,6 +1342,18 @@ ${JSON.stringify(list)}
         function onCellClick(idx) {
             if (game.over || qState) return;
             const cell = game.cells[idx];
+            if (game.teleportFor !== null) {
+                if (cell.owner !== null) { toast('🌀 傳送只能空降到空地', '#94a3b8'); return; }
+                const t = game.teleportFor;
+                game.teleportFor = null;
+                const wasBomb = cell.bomb;
+                Object.assign(cell, { owner: t, hidden: false, bomb: false, chest: false, anim: true });
+                SFX.chest();
+                toast(`🌀 ${teamName(t)} 空降成功！${wasBomb ? '順便拆掉了一顆 💣' : ''}`, TEAM_STYLES[t].color);
+                checkEnclosures();
+                nextTurn();
+                return;
+            }
             if (!validTargets(game.current).has(cell)) {
                 if (cell.owner === game.current) toast('這格已經是你們的了！', '#94a3b8');
                 else if (cell.home) toast('🏠 基地不能攻打喔', '#94a3b8');
@@ -1335,6 +1368,13 @@ ${JSON.stringify(list)}
         function openQuestion(cell) {
             const q = drawQuestion(cell.value);
             if (!q) { toast('題庫是空的，請回設定出題', '#f87171'); return; }
+            const wasHidden = cell.hidden;
+            cell.hidden = false;
+            if (wasHidden) {
+                if (cell.bomb) { SFX.wrong(); toast('💣 翻到炸彈了！答對才能拆掉', '#f87171'); }
+                else if (cell.chest) { SFX.chest(); toast('🎁 翻到寶箱！答對就能打開', '#fbbf24'); }
+                else toast(`❓ 翻開了！是 ${'★'.repeat(cell.value)} 格`, '#c4b5fd');
+            }
             const attacker = game.current;
             const defender = cell.owner;
             qState = { cell, q, attacker, defender, phase: 'answer', answerer: attacker, out: new Set(), entry: {
@@ -1343,7 +1383,7 @@ ${JSON.stringify(list)}
             } };
             const s = TEAM_STYLES[attacker];
             $('qWho').innerHTML = `${teamTag(attacker, 'text-xl md:text-2xl')} <span class="text-slate-300 text-lg md:text-xl">${
-                defender !== null ? `攻打 ${teamTag(defender, 'text-base')} 的格子` : '挑戰空地'}${cell.chest ? ' 🎁' : ''}</span>`;
+                defender !== null ? `攻打 ${teamTag(defender, 'text-base')} 的格子` : '挑戰空地'}${cell.chest ? ' 🎁' : ''}${cell.bomb ? ' <span class="text-red-400">💣 拆彈題</span>' : ''}</span>`;
             $('qStars').innerText = '★'.repeat(cell.value);
             $('qExt').classList.toggle('hidden', q.source !== '延伸');
             $('qText').innerText = q.q;
@@ -1428,9 +1468,8 @@ ${JSON.stringify(list)}
                 qState.out.add(i);
                 if (qState.phase === 'answer') openSteal();
                 else {
-                    game.teams[who].bonus -= 1;
                     qState.entry.steal.ok = false;
-                    reveal(`✘ ${teamName(who)} 搶答失敗，扣 1 分`, '#f87171');
+                    failReveal(`✘ ${teamName(who)} 搶答沒答對`);
                 }
             }
         }
@@ -1444,34 +1483,51 @@ ${JSON.stringify(list)}
                 qState.entry.pick = -1;
                 openSteal();
             } else {
-                game.teams[qState.answerer].bonus -= 1;
                 game.teams[qState.answerer].wrong++;
                 qState.entry.steal.pick = -1;
                 qState.entry.steal.ok = false;
-                reveal(`⏰ ${teamName(qState.answerer)} 時間到，搶答失敗扣 1 分`, '#f87171');
+                failReveal(`⏰ ${teamName(qState.answerer)} 時間到`);
             }
         }
 
-        // 搶答：其他組誰先按誰答
+        // 🎡 轉盤：從其他組隨機抽一組搶答，不用衝上台搶，也不會有人被針對
         function openSteal() {
             qState.phase = 'steal';
             SFX.steal();
             const others = [...Array(game.n).keys()].filter(i => i !== qState.attacker);
             $('stealBtns').innerHTML = others.map(i => {
                 const s = TEAM_STYLES[i];
-                return `<button onclick="takeSteal(${i})" class="px-5 py-4 md:px-7 md:py-5 rounded-2xl text-xl md:text-2xl font-black text-white border-4 border-white/30 shadow-xl active:scale-95 transition" style="background:${s.color}">
-                    ${s.emoji} ${escapeHtml(teamName(i))}<div class="text-xs font-bold opacity-90">我要搶！</div></button>`;
+                return `<div data-team="${i}" class="spin-chip px-5 py-3 md:px-6 md:py-4 rounded-2xl text-lg md:text-2xl font-black text-white border-4 border-transparent opacity-40 transition" style="background:${s.color}">${s.emoji} ${escapeHtml(teamName(i))}</div>`;
             }).join('');
+            $('stealHint').innerText = '轉呀轉……抽到的組答對就拿走這一格，答錯不扣分';
             $('stealArea').classList.remove('hidden');
-            $('qTimer').innerText = '⚡';
-            // 8 秒沒人搶就公布答案
-            const t0 = performance.now();
-            $('qBar').style.background = '#38bdf8';
-            timerInterval = setInterval(() => {
-                const left = Math.max(0, 8 - (performance.now() - t0) / 1000);
-                $('qBar').style.width = (left / 8 * 100) + '%';
-            }, 100);
-            stealTimeout = setTimeout(noSteal, 8000);
+            $('qTimer').innerText = '🎡';
+            $('qBar').style.width = '0%';
+            const chips = [...document.querySelectorAll('#stealBtns .spin-chip')];
+            const target = Math.floor(Math.random() * chips.length);
+            const steps = chips.length * 3 + target;   // 轉三圈後停在目標
+            let k = 0;
+            const tick = () => {
+                if (!qState || qState.phase !== 'steal') return;
+                chips.forEach((c, j) => {
+                    const on = j === k % chips.length;
+                    c.style.opacity = on ? '1' : '0.4';
+                    c.style.borderColor = on ? '#fde047' : 'transparent';
+                    c.style.transform = on ? 'scale(1.12)' : 'scale(1)';
+                });
+                SFX.tick();
+                if (k >= steps) {
+                    const team = Number(chips[k % chips.length].dataset.team);
+                    $('stealHint').innerHTML = `🎯 抽中 <b style="color:${TEAM_STYLES[team].color}">${escapeHtml(teamName(team))}</b>！準備搶答`;
+                    SFX.correct();
+                    stealTimeout = setTimeout(() => takeSteal(team), 1200);
+                    return;
+                }
+                k++;
+                // 越轉越慢
+                stealTimeout = setTimeout(tick, 60 + Math.pow(k / steps, 3) * 380);
+            };
+            tick();
         }
 
         function takeSteal(i) {
@@ -1482,7 +1538,7 @@ ${JSON.stringify(list)}
             qState.answerer = i;
             qState.entry.steal = { team: i, pick: null, ok: null };
             $('stealArea').classList.add('hidden');
-            $('qWho').innerHTML = `${teamTag(i, 'text-xl md:text-2xl')} <span class="text-amber-300 text-lg md:text-xl">⚡ 搶答中！</span>`;
+            $('qWho').innerHTML = `${teamTag(i, 'text-xl md:text-2xl')} <span class="text-amber-300 text-lg md:text-xl">🎡 轉盤抽中，搶答中！</span>`;
             renderOptions(TEAM_STYLES[i].color);
             startQTimer(Math.max(5, Math.ceil(timeFor(qState.cell.value) / 2)), () => answerTimeout());
         }
@@ -1491,7 +1547,23 @@ ${JSON.stringify(list)}
             if (!qState || qState.phase !== 'steal') return;
             stopTimers();
             $('stealArea').classList.add('hidden');
-            reveal('沒有人搶答成功，這一格維持原狀', '#94a3b8');
+            failReveal('這一格沒有被拿下');
+        }
+
+        // 沒人答對：如果是炸彈格就爆炸，挑戰的組失去自己的一格
+        function failReveal(msg) {
+            const cell = qState.cell;
+            if (cell.bomb) {
+                cell.bomb = false;
+                const mine = game.cells.filter(x => x.owner === qState.attacker && !x.home);
+                if (mine.length) {
+                    const lost = mine[Math.floor(Math.random() * mine.length)];
+                    lost.owner = null; lost.extra = 0; lost.anim = true;
+                    msg += `　💥 炸彈爆炸！${teamName(qState.attacker)} 失去一格`;
+                } else msg += '　💥 炸彈爆炸了，幸好還沒有格子可以炸';
+                setTimeout(SFX.wrong, 300);
+            }
+            reveal(msg, '#94a3b8');
         }
 
         // 答對：占領格子
@@ -1510,6 +1582,12 @@ ${JSON.stringify(list)}
                 msg = viaSteal ? `⚡ ${teamName(team)} 搶答成功，拿下這一格！`
                     : (prev !== null ? `⚔️ 攻打成功！${teamName(team)} 搶下 ${teamName(prev)} 的格子` : `✔ 答對！${teamName(team)} 占領這一格`);
             }
+            // 💣 拆彈成功
+            if (cell.bomb) {
+                cell.bomb = false;
+                game.teams[team].bonus += 2;
+                msg += '　💣 拆彈成功 +2 分！';
+            }
             // 寶箱
             if (cell.chest && cell.owner === team) {
                 cell.chest = false;
@@ -1519,11 +1597,15 @@ ${JSON.stringify(list)}
         }
 
         function openChest(team, cell) {
+            const hiddenLeft = game.cells.filter(x => x.hidden);
             const effects = [
                 { icon: '💰', text: '加 3 分！', apply: () => { game.teams[team].bonus += 3; } },
                 { icon: '✖️2', text: '這一格分數翻倍！', apply: () => { cell.extra = cell.value; } },
-                { icon: '🔁', text: '再行動一次！', apply: () => { game.extraTurnFor = team; } }
-            ];
+                { icon: '🔁', text: '再行動一次！', apply: () => { game.extraTurnFor = team; } },
+                { icon: '🌀', text: '傳送！按繼續後，點任何一格空地直接空降', apply: () => { game.teleportFor = team; }, ok: () => game.cells.some(x => x.owner === null && x !== cell) },
+                { icon: '🧱', text: '城牆！你們的格子一整回合不能被攻打', apply: () => { game.teams[team].wallUntil = game.turnsTaken + game.n + 1; } },
+                { icon: '🔍', text: '透視！翻開地圖上 3 格隱藏格', apply: () => { shuffle(hiddenLeft).slice(0, 3).forEach(x => { x.hidden = false; x.anim = true; }); }, ok: () => hiddenLeft.length > 0 }
+            ].filter(e => !e.ok || e.ok());
             const e = effects[Math.floor(Math.random() * effects.length)];
             e.apply();
             return e;
@@ -1555,6 +1637,10 @@ ${JSON.stringify(list)}
             qState = null;
             $('qModal').classList.add('hidden');
             checkEnclosures();
+            if (game.teleportFor !== null) {
+                if (game.cells.some(x => x.owner === null)) { renderAll(); return; }   // 等老師點空地
+                game.teleportFor = null;
+            }
             nextTurn();
         }
 
@@ -1600,6 +1686,7 @@ ${JSON.stringify(list)}
         function skipTurn() {
             if (game.over || qState) return;
             if (!confirm(`確定要跳過 ${teamName(game.current)} 這一回合嗎？`)) return;
+            game.teleportFor = null;
             nextTurn();
         }
 
